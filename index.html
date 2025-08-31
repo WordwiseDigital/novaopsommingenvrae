@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+    <meta charset="UTF-8">
+    <title>Nova – Die Begin Studie‑speletjie</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+            background: #0a0a28;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        /* Canvas to draw stars */
+        #starfield {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        /* Container for content */
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        h1 {
+            margin-top: 40px;
+            font-size: 2.5em;
+        }
+        h2 {
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+        .button {
+            background-color: #1e3a6e;
+            border: 2px solid #ffffff;
+            color: #ffffff;
+            padding: 12px 24px;
+            margin: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 8px;
+        }
+        .button:hover {
+            background-color: #274d8a;
+        }
+        .hidden {
+            display: none;
+        }
+        /* Quiz area */
+        #quizArea {
+            width: 90%;
+            max-width: 800px;
+        }
+        #question {
+            margin-top: 30px;
+            font-size: 1.3em;
+            min-height: 80px;
+        }
+        #feedback {
+            margin-top: 10px;
+            font-style: italic;
+            min-height: 24px;
+        }
+        .option {
+            background-color: #324fa6;
+            border: 1px solid #ffffff;
+            padding: 10px;
+            margin: 8px 0;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .option:hover {
+            background-color: #3f62c0;
+        }
+        .correct {
+            background-color: #008000 !important;
+        }
+        .wrong {
+            background-color: #a02020 !important;
+        }
+        #xpDisplay {
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+        /* Progress bar */
+        #progressBar {
+            width: 80%;
+            height: 20px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #rocket {
+            position: absolute;
+            top: -18px;
+            font-size: 24px;
+        }
+        /* Summary page */
+        #summaryPage {
+            width: 90%;
+            max-width: 800px;
+            height: 80%;
+            overflow-y: auto;
+            background-color: rgba(10, 20, 40, 0.8);
+            padding: 20px;
+            border: 1px solid #fff;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        #summaryPage h3 {
+            margin-top: 20px;
+        }
+        #endScreen {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div id="container">
+    <!-- Main Menu -->
+    <div id="menu">
+        <h1>Nova – Die Begin</h1>
+        <h2>Studie‑speletjie vir graad 8</h2>
+        <button class="button" id="startBtn">Begin Quiz</button>
+        <button class="button" id="summaryBtn">Lees Opsommings</button>
+    </div>
+
+    <!-- Quiz Area -->
+    <div id="quizArea" class="hidden">
+        <div id="xpDisplay">XP: 0</div>
+        <div id="progressBar"><span id="rocket">🚀</span></div>
+        <div id="feedback"></div>
+        <div id="question"></div>
+        <div id="options"></div>
+        <div style="margin-top:20px;">
+            <button class="button" id="quizSummaryBtn">Opsommings</button>
+            <button class="button" id="quizRestartBtn">Begin Weer</button>
+            <button class="button" id="prevBtn">Vorige</button>
+            <button class="button" id="nextBtn">Volgende</button>
+        </div>
+    </div>
+
+    <!-- Summary Page -->
+    <div id="summaryPage" class="hidden"></div>
+    <button class="button hidden" id="backBtn">Terug</button>
+
+    <!-- End Screen -->
+    <div id="endScreen" class="hidden">
+        <h1>Goeie werk!</h1>
+        <p id="finalXP"></p>
+        <button class="button" id="playAgainBtn">Speel Weer</button>
+        <button class="button" id="menuBtn">Hoofmenu</button>
+    </div>
+</div>
+
+<script>
+// Starry background drawing on canvas
+const canvas = document.getElementById('starfield');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+const stars = [];
+for (let i = 0; i < 150; i++) {
+    stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1
+    });
+}
+function drawStars() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    stars.forEach(s => {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// Data definitions
+const questions = [
+    { q: "Wie is die hoofkarakter in die verhaal?", a: "Lucas Niemand" },
+    { q: "Waar woon Lucas en sy gesin?", a: "In die dorpie Nova" },
+    { q: "Wat gebeur tydens die terugrit van vakansie?", a: "Hulle sien ligte en die motor se elektronika val uit" },
+    { q: "Wat is die Hok?", a: "’n Geheimsinnige militêre basis" },
+    { q: "Wie werk meestal by die Hok?", a: "Bykans al die inwoners van Nova" },
+    { q: "Watter vreemde wese sien Lucas in die rivier?", a: "’n Swart, glibberige ding" },
+    { q: "Hoe voel Lucas oor sy pa na die terugrit?", a: "Hy dink sy pa hou iets weg" },
+    { q: "Hoe ervaar Lucas die nuwe skooljaar?", a: "Hy maak nuwe vriende wat nuuskierig is soos hy" },
+    { q: "Watter tema word deur die Hok verteenwoordig?", a: "Geheimhouding en beheer" },
+    { q: "Watter emosie ervaar Lucas die meeste in die begin van die verhaal?", a: "Onsekerheid en nuuskierigheid" },
+    { q: "Wat doen Lucas en sy vriende om meer uit te vind?", a: "Hulle begin self ondersoek in te stel" },
+    { q: "Wat ontdek hulle oor die Hok se werk?", a: "Daar is moontlik buiteaardse eksperimente" },
+    { q: "Hoe reageer die militêre mag toe die kinders nader aan die waarheid kom?", a: "Hulle probeer dit stilmaak" },
+    { q: "Wat simboliseer die swart ding in die rivier?", a: "Die onbekende en gevaarlike waarheid" },
+    { q: "Wat veroorsaak spanning in Lucas se gesin?", a: "Sy pa se geheime" },
+    { q: "Watter rol speel vriendskap in die verhaal?", a: "Dit help Lucas om moed te hê en ondersoek te doen" },
+    { q: "Hoe word spanning en gevaar opgebou?", a: "Deur vreemde verskynsels en militêre geheime" },
+    { q: "Wat is die belangrikste keuse wat Lucas moet maak?", a: "Om die waarheid te soek al is dit gevaarlik" },
+    { q: "Hoe kan die genre van die verhaal beskryf word?", a: "Wetenskapfiksie / Avontuur" },
+    { q: "Wat is die betekenis van die titel ‘Die Begin’?", a: "Dit dui op die begin van ’n groter avontuur/reeks" },
+    { q: "Waarom dink jy hou die soldate dinge weg van die dorp?", a: "Omdat dit geheim en gevaarlik is" },
+    { q: "Hoe dra die omgewing van Nova by tot die atmosfeer?", a: "Dit is geïsoleer en geheim" },
+    { q: "Wat leer Lucas oor homself in die verhaal?", a: "Hy is dapperder as wat hy gedink het" },
+    { q: "Wat is die belangrikste konflik in die storie?", a: "Die waarheid teenoor geheimhouding" },
+    { q: "Waarom dink jy vertrou Lucas nie sy pa heeltemal nie?", a: "Omdat sy pa sekere dinge wegsteek" },
+    { q: "Wat beteken dit dat die motor se elektronika ophou werk?", a: "Dat die vreemde krag/ligte dit beïnvloed" },
+    { q: "Hoe verskil Lucas van sy vriende?", a: "Hy is meer vasberade om die waarheid uit te vind" },
+    { q: "Wat is die rol van drome en raaisels in die verhaal?", a: "Dit dra by tot die misterie en spanning" },
+    { q: "Hoe eindig die boek?", a: "Met die besef dat dit net die begin is van ’n groter reis" },
+    { q: "Hoe kan Lucas as karakter beskryf word?", a: "Nuuskierig, vasberade, dapper" },
+    { q: "Wat is die sentrale tema van die boek?", a: "Die soeke na waarheid in ’n wêreld van geheime" },
+    { q: "Hoe dra die Hok by tot die konflik?", a: "Dit is die bron van geheimhouding en gevaar" },
+    { q: "Wat is Lucas se grootste vrees?", a: "Dat die Hok en die vreemde dinge mense skade sal doen" },
+    { q: "Waarom dink jy het die skrywer die verhaal in Nova laat afspeel?", a: "Omdat dit ’n perfekte plek is vir geheime en isolasie" },
+    { q: "Hoe voel jy oor die militêre se rol in die verhaal?", a: "Hulle is teenstanders wat die waarheid wegsteek" },
+    { q: "Wat beteken die ontmoeting met die wese vir Lucas?", a: "Dit bevestig sy vermoedens oor iets buite‑aards" },
+    { q: "Hoe verander Lucas van die begin tot die einde?", a: "Hy groei van onseker na dapper en vasberade" },
+    { q: "Wat leer lesers uit Lucas se ervaring?", a: "Om vrae te vra en nie blindelings te vertrou nie" },
+    { q: "Sou jy Lucas se besluite as wys of roekeloos beskryf?", a: "Albei—wys om die waarheid te soek, maar gevaarlik" },
+    { q: "Waarom dink jy is die boek geskryf as deel van ’n reeks?", a: "Omdat die storie groter is as een boek en bou spanning op" }
+];
+// Extract all answers for distractor generation
+const allAnswers = questions.map(item => item.a);
+
+// Shuffle array helper
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Game state variables
+let xp = 0;
+let questionOrder = [];
+let currentQuestionIndex = 0;
+const totalQuestions = questions.length;
+let responses = [];
+
+// Elements
+const menuDiv = document.getElementById('menu');
+const summaryDiv = document.getElementById('summaryPage');
+const quizDiv = document.getElementById('quizArea');
+const endDiv = document.getElementById('endScreen');
+const startBtn = document.getElementById('startBtn');
+const summaryBtn = document.getElementById('summaryBtn');
+const backBtn = document.getElementById('backBtn');
+const xpDisplay = document.getElementById('xpDisplay');
+const questionEl = document.getElementById('question');
+const optionsEl = document.getElementById('options');
+const rocketEl = document.getElementById('rocket');
+const progressBar = document.getElementById('progressBar');
+const finalXP = document.getElementById('finalXP');
+const playAgainBtn = document.getElementById('playAgainBtn');
+const menuBtn = document.getElementById('menuBtn');
+const feedbackEl = document.getElementById('feedback');
+const quizSummaryBtn = document.getElementById('quizSummaryBtn');
+const quizRestartBtn = document.getElementById('quizRestartBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+// Summary content (Afrikaans with English italics)
+const summaryContent = `
+<h3>Opsomming van die boek</h3>
+<p>'Nova – Die Begin' volg Lucas Niemand en sy gesin wanneer hulle van vakansie af terugkeer. Op die terugrit sien hulle vreemde ligte en die motor se elektronika hou op werk, wat onmiddellik spanning en raaisels skep. Hulle vestig hulle in die dorpie Nova waar bykans almal by die geheimsinnige militêre basis, die Hok, werk. Lucas vermoed dat dinge weggesteek word en sy nuuskierigheid word groter wanneer hy ’n swart, glibberige wese in die rivier sien.</p>
+<p><em>'Nova – The Beginning' follows Lucas Niemand and his family as they drive home from holiday. On the return trip they see strange lights and the car’s electronics stop working, creating immediate tension and mystery. They settle in the village of Nova where almost everyone works at the secretive military base, the Hok. Lucas senses that things are being hidden and his curiosity grows when he spots a black, slimy creature in the river.</em></p>
+<p>By die skool maak Lucas vriende wat sy nuuskierigheid deel en saam besluit hulle om ondersoek in te stel. Lucas begin ook besef dat sy pa meer weet as wat hy erken, wat spanning in die huis veroorsaak. Namate hulle nader aan die waarheid kom, onthul leidrade dat daar moontlik buiteaardse eksperimente in die Hok plaasvind. ’n Konfrontasie met die wese en soldate bevestig hul vermoedens. Die vriende besef dat hulle ’n sleutelrol speel om die waarheid na buite te bring, ondanks die groot gevaar. Die storie eindig met die besef dat hierdie avontuur net die begin is van ’n groter reis vol geheime, wetenskap en oorlewing.</p>
+<p><em>At school Lucas makes friends who share his curiosity and together they decide to investigate. Lucas also realizes that his father knows more than he admits, causing tension at home. As they get closer to the truth, clues reveal that alien experiments might be taking place at the Hok. A confrontation with the creature and soldiers confirms their suspicions. The friends realize they play a key role in bringing the truth to light, despite the great danger. The story ends with the realization that this adventure is only the beginning of a larger journey full of secrets, science and survival.</em></p>
+<h3>Hoofstukke</h3>
+<p><strong>Hoofstuk 1 – Die terugrit</strong><br>
+Lucas Niemand en sy gesin ry laatnag terug van vakansie. Hulle sien vreemde ligte in die lug en die motor se elektronika gaan dood. Dit skep ’n gevoel van misterie en gevaar.<br>
+<em>Lucas Niemand and his family are driving home late at night from holiday. Strange lights appear in the sky and their car’s electronics die. It sets up a mood of mystery and danger.</em></p>
+<p><strong>Hoofstuk 2 – Nova en die Hok</strong><br>
+Hulle kom aan by die dorpie Nova, waar byna almal in die geheimsinnige militêre basis, die Hok, werk. Lucas voel iets word vir hom weggesteek.<br>
+<em>They arrive in Nova, where nearly everyone works in the secretive military base, the Hok. Lucas senses something is being kept from him.</em></p>
+<p><strong>Hoofstuk 3 – Die vreemde swart ding</strong><br>
+Lucas sien ’n swart, glibberige wese in die rivier. Dit laat hom vermoed dat daar meer aan die gang is as net militêre eksperimente.<br>
+<em>Lucas spots a black, slimy creature in the river, which makes him suspect there is more going on than just military experiments.</em></p>
+<p><strong>Hoofstuk 4 – Die vriende sluit aan</strong><br>
+Lucas begin sy nuwe skooljaar en ontmoet nuwe vriende. Hulle deel sy nuuskierigheid oor wat in die Hok aangaan.<br>
+<em>Lucas starts the new school year and meets friends who share his curiosity about the Hok.</em></p>
+<p><strong>Hoofstuk 5 – Die geheim van sy pa</strong><br>
+Hy ontdek dat sy pa waarskynlik meer weet oor die Hok en die vreemde gebeure as wat hy erken. Dit veroorsaak spanning in die huis.<br>
+<em>He realizes that his father probably knows more about the Hok and the strange events than he admits, creating tension at home.</em></p>
+<p><strong>Hoofstuk 6 – Die ondersoek begin</strong><br>
+Lucas en sy vriende begin planne maak om self ondersoek in te stel. Hulle word al hoe meer betrek in ’n gevaarlike avontuur.<br>
+<em>Lucas and his friends start making plans to investigate on their own, pulling them into a dangerous adventure.</em></p>
+<p><strong>Hoofstuk 7 – Nader aan die waarheid</strong><br>
+Hulle ontdek leidrade dat die Hok moontlik eksperimente met buiteaardse wesens doen. Die gevaar neem toe.<br>
+<em>They uncover clues that the Hok may be experimenting with alien beings. The danger intensifies.</em></p>
+<p><strong>Hoofstuk 8 – Die nag van die waarheid</strong><br>
+’n Ontmoeting met die wese en die militêre mag bevestig Lucas se vrese: daar is buiteaardse betrokkenheid.<br>
+<em>A confrontation with the creature and the military confirms Lucas’s fears: there is alien involvement.</em></p>
+<p><strong>Hoofstuk 9 – Lucas se rol</strong><br>
+Lucas besef dat hy en sy vriende ’n belangrike rol speel in die blootlegging van die waarheid, al plaas dit hulle in groot gevaar.<br>
+<em>Lucas realizes that he and his friends play a key role in uncovering the truth, even though it puts them in great danger.</em></p>
+<p><strong>Hoofstuk 10 – Die begin van ’n groter reis</strong><br>
+Die avontuur eindig nie—dit is slegs die begin van iets baie groter. Lucas word ingestoot in ’n wêreld van geheime, wetenskap en oorlewing.<br>
+<em>The adventure doesn’t end—it’s only the beginning of something much bigger. Lucas is thrust into a world of secrets, science and survival.</em></p>
+`;
+
+// Initialise summary page content
+summaryDiv.innerHTML = summaryContent;
+
+// Show summary page
+summaryBtn.addEventListener('click', () => {
+    menuDiv.classList.add('hidden');
+    summaryDiv.classList.remove('hidden');
+    backBtn.classList.remove('hidden');
+});
+
+// Back button from summary
+backBtn.addEventListener('click', () => {
+    summaryDiv.classList.add('hidden');
+    backBtn.classList.add('hidden');
+    menuDiv.classList.remove('hidden');
+});
+
+// Start quiz handler
+startBtn.addEventListener('click', () => {
+    menuDiv.classList.add('hidden');
+    quizDiv.classList.remove('hidden');
+    xp = 0;
+    xpDisplay.textContent = `XP: ${xp}`;
+    // Generate question order
+    questionOrder = Array.from(Array(questions.length).keys());
+    shuffle(questionOrder);
+    currentQuestionIndex = 0;
+    responses = [];
+    updateRocket();
+    showQuestion();
+});
+
+// Quiz page navigation buttons
+quizSummaryBtn.addEventListener('click', () => {
+    // Return to summaries without leaving quiz progress
+    quizDiv.classList.add('hidden');
+    summaryDiv.classList.remove('hidden');
+    backBtn.classList.remove('hidden');
+});
+quizRestartBtn.addEventListener('click', () => {
+    // Restart the quiz from scratch
+    xp = 0;
+    xpDisplay.textContent = `XP: ${xp}`;
+    questionOrder = Array.from(Array(questions.length).keys());
+    shuffle(questionOrder);
+    currentQuestionIndex = 0;
+    updateRocket();
+    showQuestion();
+    feedbackEl.textContent = '';
+});
+
+// Previous and Next question navigation
+prevBtn.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex -= 1;
+        showQuestion();
+    }
+});
+nextBtn.addEventListener('click', () => {
+    // If on last question and it is answered, finishing
+    if (nextBtn.textContent === 'Voltooi') {
+        quizDiv.classList.add('hidden');
+        endDiv.classList.remove('hidden');
+        finalXP.textContent = `Jou finale XP: ${xp}`;
+    } else {
+        if (currentQuestionIndex < questionOrder.length - 1) {
+            currentQuestionIndex += 1;
+            showQuestion();
+        }
+    }
+});
+
+// Helper: generate options with one correct and three random distractors
+function generateOptions(correct) {
+    const options = [correct];
+    while (options.length < 4) {
+        const candidate = allAnswers[Math.floor(Math.random() * allAnswers.length)];
+        if (!options.includes(candidate)) options.push(candidate);
+    }
+    shuffle(options);
+    return options;
+}
+
+// Show the current question and update controls
+function showQuestion() {
+    if (currentQuestionIndex >= questionOrder.length) {
+        // End of quiz
+        quizDiv.classList.add('hidden');
+        endDiv.classList.remove('hidden');
+        finalXP.textContent = `Jou finale XP: ${xp}`;
+        return;
+    }
+    const qIndex = questionOrder[currentQuestionIndex];
+    const item = questions[qIndex];
+    // Always update rocket position based on current index
+    updateRocket();
+    // Configure navigation buttons
+    prevBtn.disabled = currentQuestionIndex === 0;
+    // Determine if the question has already been answered
+    const resp = responses[currentQuestionIndex];
+    // Clear previous options
+    optionsEl.innerHTML = '';
+    optionsEl.classList.remove('locked');
+    // Reset feedback text
+    feedbackEl.textContent = '';
+    questionEl.textContent = item.q;
+    let opts;
+    if (resp && resp.options) {
+        opts = resp.options;
+    } else {
+        opts = generateOptions(item.a);
+        // If not yet answered, store options for future reference
+        responses[currentQuestionIndex] = { ...(resp || {}), options: opts };
+    }
+    // Render options
+    opts.forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'option';
+        div.textContent = opt;
+        // If answered, show highlights and disable clicks
+        if (resp && resp.selected !== undefined) {
+            // Determine highlight
+            const sel = resp.selected.trim().toLowerCase();
+            const corr = item.a.trim().toLowerCase();
+            if (opt.trim().toLowerCase() === corr) {
+                div.classList.add('correct');
+            }
+            if (opt.trim().toLowerCase() === sel && sel !== corr) {
+                div.classList.add('wrong');
+            }
+            // No click listener
+        } else {
+            // Not answered yet: attach click handler
+            div.addEventListener('click', () => selectAnswer(div, opt, item.a));
+        }
+        optionsEl.appendChild(div);
+    });
+    // Show feedback and configure next button
+    if (resp && resp.selected !== undefined) {
+        // Already answered: show stored feedback
+        feedbackEl.textContent = resp.xp > 0 ? `Reg! +${resp.xp} XP` : `Verkeerd! ${resp.xp} XP`;
+        optionsEl.classList.add('locked');
+        // Determine next button text and enable it
+        if (currentQuestionIndex === questionOrder.length - 1) {
+            nextBtn.textContent = 'Voltooi';
+        } else {
+            nextBtn.textContent = 'Volgende';
+        }
+        nextBtn.disabled = false;
+    } else {
+        // Not yet answered: disable next and set text
+        nextBtn.textContent = (currentQuestionIndex === questionOrder.length - 1) ? 'Voltooi' : 'Volgende';
+        nextBtn.disabled = true;
+    }
+}
+
+// Handle answer selection
+function selectAnswer(selectedElem, selected, correct) {
+    // Prevent multiple selections
+    if (optionsEl.classList.contains('locked')) return;
+    optionsEl.classList.add('locked');
+    let gained = 0;
+    const sel = selected.trim().toLowerCase();
+    const corr = correct.trim().toLowerCase();
+    if (sel === corr) {
+        gained = 10;
+        selectedElem.classList.add('correct');
+        feedbackEl.textContent = `Reg! +${gained} XP`;
+        xp += gained;
+    } else {
+        gained = -5;
+        selectedElem.classList.add('wrong');
+        feedbackEl.textContent = `Verkeerd! ${gained} XP`;
+        xp = Math.max(0, xp + gained);
+        // highlight the correct answer in green
+        Array.from(optionsEl.children).forEach(child => {
+            if (child.textContent.trim().toLowerCase() === corr) {
+                child.classList.add('correct');
+            }
+        });
+    }
+    // Store response for this question
+    responses[currentQuestionIndex] = { selected: selected, correct: correct, xp: gained };
+    xpDisplay.textContent = `XP: ${xp}`;
+    // Enable navigation buttons
+    nextBtn.disabled = false;
+    prevBtn.disabled = currentQuestionIndex === 0;
+}
+
+// Update rocket position along progress bar
+function updateRocket() {
+    const totalWidth = progressBar.clientWidth;
+    const steps = questionOrder.length;
+    const position = (currentQuestionIndex / steps) * (totalWidth - 24); // subtract rocket width
+    rocketEl.style.left = `${position}px`;
+}
+
+// End screen buttons
+playAgainBtn.addEventListener('click', () => {
+    endDiv.classList.add('hidden');
+    // Restart quiz
+    quizDiv.classList.remove('hidden');
+    xp = 0;
+    xpDisplay.textContent = `XP: ${xp}`;
+    questionOrder = Array.from(Array(questions.length).keys());
+    shuffle(questionOrder);
+    currentQuestionIndex = 0;
+    responses = [];
+    updateRocket();
+    showQuestion();
+});
+menuBtn.addEventListener('click', () => {
+    endDiv.classList.add('hidden');
+    menuDiv.classList.remove('hidden');
+});
+</script>
+</body>
+</html>
